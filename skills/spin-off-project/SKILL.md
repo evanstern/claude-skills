@@ -49,13 +49,36 @@ Before creating anything, review the current conversation to understand:
 
 This context is the **most valuable part** of the skill — it's what makes this different from just `gh repo create`.
 
-### Step 3: Determine Project Location
+### Step 3: Offer the Monorepo Starter (if applicable)
+
+If the project involves a **web application** (frontend, full-stack app, API with a web client, PWA, etc.), ask the user if they'd like to start from the **monorepo-starter** template (`evanstern/monorepo-starter`). This template provides a ready-to-run scaffold with:
+
+- pnpm workspaces + Turborepo monorepo
+- Hono + tRPC backend (`apps/server`)
+- React Router 7 + Vite SSR frontend (`apps/web`)
+- Shared packages: contracts (Zod schemas), shared (utils), ui (Radix + Tailwind components)
+- Docker Compose for local dev
+- Biome for linting/formatting
+
+If the user says **yes**:
+1. Clone `evanstern/monorepo-starter` into the project location (instead of creating an empty repo)
+2. Create the new GitHub repo as usual
+3. Update the git remote to point to the new repo
+4. Find-and-replace `@monorepo-starter/` with `@<repo-name>/` across all package.json files
+5. Find-and-replace `monorepo-starter` with `<repo-name>` in package.json (root), docker-compose.yml, and Dockerfiles
+6. Update the CLAUDE.md with the actual project context (don't keep the starter's generic CLAUDE.md)
+7. Update `apps/web/app/routes/home.tsx` meta title/description and page content for the new project
+8. Proceed with the rest of the steps as normal
+
+If the user says **no**, or the project doesn't involve a web app (e.g., CLI tool, library, script), skip this step and scaffold from scratch as usual.
+
+### Step 4: Determine Project Location
 
 The default location for new projects is the **parent directory of the current working directory**. For example, if you're in `/Users/evanstern/projects/evanstern/ideas`, create the project at `/Users/evanstern/projects/evanstern/<repo-name>`.
 
 If the user specifies a different location, use that instead.
 
-### Step 4: Check for Conflicts
+### Step 5: Check for Conflicts
 
 Before creating anything, verify:
 - The directory doesn't already exist locally
@@ -63,7 +86,7 @@ Before creating anything, verify:
 
 If either exists, ask the user how to proceed.
 
-### Step 5: Create the GitHub Repository
+### Step 6: Create the GitHub Repository
 
 ```bash
 gh repo create <github-username>/<repo-name> --public --description "<description>" --clone=false
@@ -71,7 +94,7 @@ gh repo create <github-username>/<repo-name> --public --description "<descriptio
 
 Use the GitHub username from the current git config or the existing repo's remote URL.
 
-### Step 6: Clone and Scaffold
+### Step 7: Clone and Scaffold
 
 Clone the repo into the determined location, then create:
 
@@ -141,7 +164,7 @@ Create an appropriate .gitignore for the project's language/framework.
 
 Only create additional files if they were specifically discussed (e.g., package.json, tsconfig.json). Don't over-scaffold — the point is to capture context, not generate boilerplate.
 
-### Step 7: Commit and Push
+### Step 8: Commit and Push
 
 ```bash
 git add -A
@@ -153,7 +176,7 @@ Co-Authored-By: Claude <noreply@anthropic.com>"
 git push -u origin <branch>
 ```
 
-### Step 8: Report Back
+### Step 9: Report Back
 
 Tell the user:
 - The GitHub repo URL
