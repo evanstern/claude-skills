@@ -2,8 +2,8 @@
 name: process-downloads
 version: 1.0.0
 description: |
-  Process downloaded media files from /Volumes/complete folders. Extracts RAR
-  archives and moves files to the correct location in /Volumes/media. Handles
+  Process downloaded media files from /mnt/jace_complete folders. Extracts RAR
+  archives and moves files to the correct location in /mnt/jace_media. Handles
   TV series (organized by show and season) and movies.
 allowed-tools:
   - Bash
@@ -16,17 +16,22 @@ allowed-tools:
 
 # Process Downloads Skill
 
-Process media downloads from `/Volumes/complete` and organize them into `/Volumes/media`.
+Process media downloads from `/mnt/jace_complete` and organize them into `/mnt/jace_media`.
+
+These mounts are SMB shares from the Jace NAS at `192.168.1.80`, mounted via
+autofs. The same physical folders are exposed on macOS as `/Volumes/complete`
+and `/Volumes/media` — this skill historically targeted those Mac paths and
+has been adapted for the Linux VM runtime (vm-104).
 
 ## Source Folders
 
-- `/Volumes/complete/Series` - TV show episodes (RAR archives)
-- `/Volumes/complete/Movies` - Movies (MKV files or RAR archives)
+- `/mnt/jace_complete/Series` - TV show episodes (RAR archives)
+- `/mnt/jace_complete/Movies` - Movies (MKV files or RAR archives)
 
 ## Destination Folders
 
-- `/Volumes/media/Video/TV` - TV shows organized as `{Show Name}/Season {XX}/`
-- `/Volumes/media/Video/Movies` - Movies as standalone files
+- `/mnt/jace_media/Video/TV` - TV shows organized as `{Show Name}/Season {XX}/`
+- `/mnt/jace_media/Video/Movies` - Movies as standalone files
 
 ## Workflow
 
@@ -35,11 +40,12 @@ Process media downloads from `/Volumes/complete` and organize them into `/Volume
 Check what's available to process:
 
 ```bash
-ls -la /Volumes/complete/Series/
-ls -la /Volumes/complete/Movies/
+ls -la /mnt/jace_complete/Series/
+ls -la /mnt/jace_complete/Movies/
 ```
 
-Skip `.DS_Store` and `#recycle` folders.
+Skip `.DS_Store` and `#recycle` folders. (`.DS_Store` files can appear on the
+SMB share even from the Linux side because macOS clients write them.)
 
 ### 2. Parse Media Information
 
@@ -62,10 +68,10 @@ Search for matching folders in the destination using flexible matching:
 
 ```bash
 # For TV shows - search by show name
-ls -d /Volumes/media/Video/TV/*keyword* 2>/dev/null
+ls -d /mnt/jace_media/Video/TV/*keyword* 2>/dev/null
 
 # For movies - search by movie name
-ls -d /Volumes/media/Video/Movies/*keyword* 2>/dev/null
+ls -d /mnt/jace_media/Video/Movies/*keyword* 2>/dev/null
 ```
 
 **Season folder naming:** Use `Season XX` format (zero-padded). If both `Season 01` and `Season 1` exist, prefer `Season 01`.
@@ -83,7 +89,7 @@ Examples:
 - `Are.You.Being.Served.1977.1080p.BluRay...` → `Are You Being Served (1977)`
 
 ```bash
-mkdir -p "/Volumes/media/Video/Movies/Spy Kids 2 Island of Lost Dreams (2002)/"
+mkdir -p "/mnt/jace_media/Video/Movies/Spy Kids 2 Island of Lost Dreams (2002)/"
 ```
 
 #### Creating New Series Folders
@@ -100,7 +106,7 @@ Examples:
 - `The.Traitors.2023.S04E09...` → `The Traitors (2023)`
 
 ```bash
-mkdir -p "/Volumes/media/Video/TV/The Beauty (2025)/Season 01/"
+mkdir -p "/mnt/jace_media/Video/TV/The Beauty (2025)/Season 01/"
 ```
 
 Note: Extract the year from the filename if present (e.g., `Show.2023.S01E01`). If no year is in the filename, ask the user or look it up.
@@ -155,7 +161,7 @@ After successful extraction/move:
 ## Example Session
 
 1. User invokes `/process-downloads`
-2. List contents of `/Volumes/complete/Series/` and `/Volumes/complete/Movies/`
+2. List contents of `/mnt/jace_complete/Series/` and `/mnt/jace_complete/Movies/`
 3. For each item found:
    - Parse the name to extract show/movie info
    - Find the matching destination folder
@@ -167,7 +173,7 @@ After successful extraction/move:
 
 ## Error Handling
 
-- If `unrar` is not installed, inform user to install it (`brew install unrar`)
+- If `unrar` is not installed, inform user to install it (`sudo apt install unrar` on Debian/Ubuntu, `brew install unrar` on macOS)
 - If destination folder not found, create it using the naming conventions (see "Creating New Folders" sections above)
 - If year cannot be determined from filename, ask the user
 - If extraction fails, report the error and continue with remaining items
